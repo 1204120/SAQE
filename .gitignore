@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+expansions/
+runs/
+out/
+*.trec
+*.metrics.json
+.DS_Store
