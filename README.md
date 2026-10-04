@@ -94,3 +94,7 @@ nDCG@10 of SAQE with Qwen3-32B as the generator and `bge-reranker-large` as the 
 Given the same expansions, the pipeline is deterministic up to FP16 numerical differences of the
 cross-encoder. Re-generating the expansions may introduce small variations because LLM serving is not
 always bit-exact, even with greedy decoding.
+
+## License
+
+This project is released under the [MIT License](LICENSE).
