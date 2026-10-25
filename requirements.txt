@@ -2,5 +2,6 @@ pyserini==0.22.1
 FlagEmbedding==1.3.3
 transformers==4.46.3
 torch==2.4.0
+numpy
 requests
 tqdm

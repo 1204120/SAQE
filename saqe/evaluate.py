@@ -1,5 +1,8 @@
-"""Evaluation with trec_eval (via Pyserini) and paired bootstrap significance testing."""
-import random
+"""Evaluation with trec_eval (via Pyserini).
+
+nDCG@10 uses the graded labels. mAP, R@100, and R@1k binarize the labels at relevance >= 2 on TREC DL and
+>= 1 on BEIR. Queries that are judged but absent from a run (no document retrieved) count as zero (-c).
+"""
 import subprocess
 import sys
 from typing import Dict
@@ -21,37 +24,20 @@ def _aggregate(args, qrels, run_path) -> float:
 
 
 def evaluate(ds: Dataset, run_path: str) -> Dict[str, float]:
-    """nDCG@10 for all datasets; additionally mAP and R@1k (relevance >= 2) for TREC DL."""
+    lvl = [] if ds.beir else ["-l", "2"]
     metrics = {"ndcg@10": _aggregate(["-m", "ndcg_cut.10"], ds.qrels, run_path)}
-    if ds.beir:
-        metrics["recall@1000"] = _aggregate(["-m", "recall.1000"], ds.qrels, run_path)
-    else:
-        metrics["map"] = _aggregate(["-l", "2", "-m", "map"], ds.qrels, run_path)
-        metrics["recall@1000"] = _aggregate(["-l", "2", "-m", "recall.1000"], ds.qrels, run_path)
+    if not ds.beir:
+        metrics["map"] = _aggregate(lvl + ["-m", "map"], ds.qrels, run_path)
+    metrics["recall@100"] = _aggregate(lvl + ["-m", "recall.100"], ds.qrels, run_path)
+    metrics["recall@1000"] = _aggregate(lvl + ["-m", "recall.1000"], ds.qrels, run_path)
     return metrics
 
 
-def per_query_ndcg10(ds: Dataset, run_path: str) -> Dict[str, float]:
-    out = {}
-    for line in _trec_eval(["-q", "-m", "ndcg_cut.10"], ds.qrels, run_path).splitlines():
+def per_query(ds: Dataset, run_path: str, queries, measure: str = "ndcg_cut.10") -> Dict[str, float]:
+    """Per-query values of a trec_eval measure for the given queries; queries absent from the run get 0."""
+    out = {q: 0.0 for q in queries}
+    for line in _trec_eval(["-q", "-m", measure], ds.qrels, run_path).splitlines():
         parts = line.split()
-        if len(parts) == 3 and parts[0] == "ndcg_cut_10" and parts[1] != "all":
+        if len(parts) == 3 and parts[1] in out:
             out[parts[1]] = float(parts[2])
     return out
-
-
-def paired_bootstrap(a: Dict[str, float], b: Dict[str, float], n_boot: int = 10000,
-                     seed: int = 42) -> Dict[str, float]:
-    """Two-sided paired bootstrap test of mean(a - b) = 0 over the shared queries."""
-    qids = sorted(set(a) & set(b))
-    diffs = [a[q] - b[q] for q in qids]
-    n = len(diffs)
-    obs = sum(diffs) / n
-    centered = [d - obs for d in diffs]
-    rng = random.Random(seed)
-    extreme = 0
-    for _ in range(n_boot):
-        s = sum(centered[rng.randrange(n)] for _ in range(n)) / n
-        if abs(s) >= abs(obs):
-            extreme += 1
-    return {"n": n, "mean_diff": obs, "p": (extreme + 1) / (n_boot + 1)}

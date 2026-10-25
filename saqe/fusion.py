@@ -4,7 +4,7 @@ from typing import List, Sequence, Tuple
 
 
 def rank_by(scores: Sequence[float], docids: Sequence[str]) -> List[str]:
-    """Order docids by descending score (ties keep the input order)."""
+    """Order docids by descending score; ties keep the input (BM25) order."""
     return [d for _, d in sorted(zip(scores, docids), key=lambda x: -x[0])]
 
 

@@ -1,18 +1,17 @@
-"""Prompts used by SAQE (identical to those used in the paper's experiments).
+"""The single prompt used by SAQE (Fig. S1 of the supplementary material), identical to the experiments.
 
-pi_doc produces the document-oriented expansion q_doc, which is appended to the
-query for first-stage BM25 retrieval. pi_int produces the intent-oriented
-expansion q_int, which is scored separately by the cross-encoder.
+The same prompt is used for all datasets and generating LLMs. One request with greedy decoding
+produces the passage p0; one request with sampling produces the passages p1, ..., p4.
 """
 
 N_WORDS = 60
 
-DOC_SYSTEM = (
-    "You write short factual passages that are grounded strictly in provided source material. "
+SYSTEM = (
+    "You expand search queries into short passages that read like excerpts from relevant documents. "
     "Output only the passage text."
 )
 
-DOC_USER = """Query: {query}
+USER = """Query: {query}
 
 Write a single passage of {n_words} words that reads like an excerpt from a reference
 document answering this query.
@@ -24,21 +23,6 @@ Rules:
 
 Passage:"""
 
-INT_SYSTEM = "You rewrite search queries into richer descriptions of what the user wants."
-
-INT_USER = """Query: {query}
-
-Rewrite this query as a single sentence of about {n_words} words that describes what the
-user is looking for and which aspects a relevant document should cover.
-
-Rules:
-- Describe the information need. Do not answer the query and do not assert facts.
-- Start with a verb such as "Explore", "Describe", "Examine" or "Identify".
-- List the facets a relevant document would address, separated by commas.
-- Plain prose, one sentence, no lists or headings.
-
-Rewrite:"""
-
-# Maximum number of generated tokens per expansion.
-DOC_MAX_TOKENS = 300
-INT_MAX_TOKENS = 250
+MAX_TOKENS = 300                                   # per passage
+GREEDY = {"temperature": 0.0, "top_p": 1.0, "n": 1}  # p0
+SAMPLED = {"temperature": 0.7, "top_p": 1.0, "n": 4}  # p1, ..., p4 (m = 4)
